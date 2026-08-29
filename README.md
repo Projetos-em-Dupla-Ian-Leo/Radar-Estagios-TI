@@ -81,9 +81,6 @@ GET /vagas?area=dados&sem_prazo=true
 
 > Observação: `prazo` e `sem_prazo` são mutuamente exclusivos — não faz sentido pedir "prazo até uma data" e "sem prazo" ao mesmo tempo, então o filtro de prazo tem prioridade se os dois forem enviados juntos.
 
-## Dashboard (Power BI)
-
-Em construção — conectado diretamente ao banco SQLite, com visuais de vagas por área, prazos mais próximos e distribuição por modelo de trabalho.
 
 ## Melhorias futuras
 
