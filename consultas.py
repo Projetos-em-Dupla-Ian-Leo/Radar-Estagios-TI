@@ -1,10 +1,7 @@
 import sqlite3
-
-conexao = sqlite3.connect("estagios.db")
-
-cursor = conexao.cursor()
-
 def listar_vagas (area = None, prazo = None, sem_prazo = False):
+    conexao = sqlite3.connect("estagios.db")
+    cursor = conexao.cursor()
     condicoes = []
     valores = []
 
@@ -23,6 +20,6 @@ def listar_vagas (area = None, prazo = None, sem_prazo = False):
     
     print(query)
     cursor.execute(query, valores)
-
-    return cursor.fetchall()
-
+    resultado = cursor.fetchall()
+    conexao.close()
+    return resultado
