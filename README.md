@@ -81,6 +81,19 @@ GET /vagas?area=dados&sem_prazo=true
 
 > Observação: `prazo` e `sem_prazo` são mutuamente exclusivos — não faz sentido pedir "prazo até uma data" e "sem prazo" ao mesmo tempo, então o filtro de prazo tem prioridade se os dois forem enviados juntos.
 
+## Automação com n8n e Inteligência Artificial
+
+O Radar foi integrado a um fluxo de automação no **n8n** (rodando em Docker) para facilitar o acompanhamento de prazos.
+
+**O que o fluxo faz:**
+1. Um agendador roda toda segunda-feira.
+2. Consome a API (`GET /vagas`) deste projeto.
+3. Filtra as vagas com prazo próximo.
+4. Usa a API do **Google Gemini** para resumir as vagas em um texto amigável.
+5. Envia o resumo diretamente no **Telegram**.
+
+O arquivo `radar-workflow.json` neste repositório contém a estrutura exportada do n8n para reprodução do fluxo.
+
 
 ## Melhorias futuras
 
