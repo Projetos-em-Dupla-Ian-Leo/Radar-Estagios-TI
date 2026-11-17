@@ -1,0 +1,164 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "900e1cf6-5242-4fca-b4d8-c1ef5523d497",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/vagas",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "4b6597dd-e1a5-40e1-bfb7-18326762efe4",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pega o que veio do nó anterior\nconst inputData = $input.all()[0].json; \n\n// O n8n às vezes aninha os dados. Vamos garantir que pegamos a lista.\nlet vagas = [];\nif (Array.isArray(inputData)) {\n    vagas = inputData; // Já é uma lista\n} else if (inputData.body && Array.isArray(inputData.body)) {\n    vagas = inputData.body; // A lista tá dentro de \"body\"\n} else if (inputData.vagas && Array.isArray(inputData.vagas)) {\n    vagas = inputData.vagas; // A lista tá dentro de \"vagas\"\n} else {\n    // Se não achou, tenta pegar o primeiro valor que for uma lista\n    const chaves = Object.keys(inputData);\n    for (let k of chaves) {\n        if (Array.isArray(inputData[k])) {\n            vagas = inputData[k];\n            break;\n        }\n    }\n}\n\n// Se ainda não for uma lista, avisa\nif (!Array.isArray(vagas)) {\n    return [{ json: { texto: \"Erro: Os dados recebidos da API não são uma lista válida.\", total: 0 } }];\n}\n\n// Data de hoje e daqui a 7 dias\nconst hoje = new Date();\nconst daquiSeteDias = new Date();\ndaquiSeteDias.setDate(hoje.getDate() + 7);\n\n// Filtra vagas com prazo entre hoje e daqui a 7 dias\nconst proximas = vagas.filter(v => {\n    if (!v.vaga_prazo_final) return false; \n    const dataVaga = new Date(v.vaga_prazo_final + \"T00:00:00\");\n    return dataVaga >= hoje && dataVaga <= daquiSeteDias;\n});\n\n// Se não tiver nada, avisa\nif (proximas.length === 0) {\n    return [{ json: { texto: \"Nenhuma vaga com prazo nos próximos 7 dias.\", total: 0 } }];\n}\n\n// Monta o texto para o Gemini\nconst texto = proximas.map(v => \n    `- ${v.emp_nome} (${v.vaga_area}): prazo ${v.vaga_prazo_final} | Link: ${v.vaga_link}`\n).join('\\n');\n\nreturn [{ json: { texto: texto, total: proximas.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "5d811ad8-bf10-44aa-a5a0-d738141f5c09",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-goog-api-key",
+              "value": "SUA_CHAVE_AQUI"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Você é um assistente de carreira. Resuma as vagas abaixo em um texto curto e amigável para Telegram (máximo 5 linhas), destacando as empresas e os prazos mais urgentes. Use emojis. Vagas:\\n\\n{{ $json.texto }}\"\n    }]\n  }]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        0
+      ],
+      "id": "1909d35f-a479-42bf-8356-afb971bc650e",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "chatId": "9296305111",
+        "text": "={{ $json.candidates[0].content.parts[0].text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "ba184ce7-10ff-43d8-8958-a20c7bd0bc66",
+      "name": "Send a text message",
+      "webhookId": "ee82359a-da89-4454-9451-af5eac3c2334",
+      "credentials": {
+        "telegramApi": {
+          "id": "uClfQro6OMxVaRfa",
+          "name": "Telegram Radar"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e12df196-88ce-413d-b56b-392e57bd39c5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6b774385b7644740cfc6cc149717869a854329abee51cd02adc7ce7a2008d05c"
+  },
+  "nodeGroups": [],
+  "id": "0ron9EnECxE1NZ5t",
+  "tags": []
+}
